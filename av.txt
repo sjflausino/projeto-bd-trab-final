@@ -1,0 +1,23 @@
+* Tema livre (necessário conversar comigo antes). Apesar de tema "livre" é proibido qualquer tema que envolva pornografia, ofensas a pessoas ou grupo de pessoas ou temas preconceituosos/racistas/machistas/etc.
+
+* Cada grupo deverá escolher um tema (ex. campeonato brasileiro de futebol) que servirá como base para o desenvolvimento do trabalho. Para o tema escolhido, cada grupo deverá desenvolver:
+
+1. O modelo conceitual
+2. O esquema relacional no SGBD escolhido (mySQL, Oracle, SQL Server ou PostgreSQL)
+3. Cada esquema deve conter *NO MÍNIMO* 15 tabelas
+4. Cada grupo deve implementar * NO MÍNIMO* 5 stored procedures/funções
+5. Cada grupo deve implementar *NO MÍNIMO* 2 triggers
+6. Cada grupo deve implementar *NO MÍNIMO* 2 visões
+7. Cada grupo deve propor 10 consultas sobre o banco de dados desenvolvido. PS: não vale "SELECT * FROM CLIENTE"
+8. Cada grupo deve implementar os índices de forma a acelerar as consultas propostas no item (7)
+
+Itens Opcionais:
+
+a. Permissões no banco de dados
+b. Fragmentação de tabelas
+
+PS1: É importante ressaltar que a nota do trabalho considera tanto os scripts de criação do banco e o modelo conceitual. 
+
+PS2: quanto mais elaboradas forem as funções, triggers, consultas, maior será a nota do trabalho.
+
+PS3: Trabalhos com modelo conceitual diferente do schema do BD serão zerados, i.e., não tem como um modelo conceitual errado gerar um schema correto.

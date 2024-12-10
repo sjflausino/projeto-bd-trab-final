@@ -1,0 +1,13 @@
+services:
+  db:
+    image: postgres:14 # Utilize a versão desejada do PostgreSQL
+    container_name: postgres-dump-container
+    restart: always
+    environment:
+      POSTGRES_USER: postgres # Usuário padrão
+      POSTGRES_PASSWORD: postgres # Senha do usuário
+      POSTGRES_DB: postgres # Banco de dados a ser criado automaticamente
+    ports:
+      - 5432:5432 # Mapeia a porta 5432 do contêiner para a porta 5432 do host
+    volumes:
+      - ./init-db:/docker-entrypoint-initdb.d # Diretório para scripts de inicialização
