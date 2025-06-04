@@ -138,3 +138,13 @@ CREATE TABLE monitores (
     data_inicio DATE NOT NULL,
     data_fim DATE
 );
+
+-- Mensagens privadas entre usuários
+CREATE TABLE mensagens (
+    mensagem_id SERIAL PRIMARY KEY,
+    remetente_id INT REFERENCES usuarios(usuario_id) ON DELETE CASCADE,
+    destinatario_id INT REFERENCES usuarios(usuario_id) ON DELETE CASCADE,
+    conteudo TEXT NOT NULL,
+    data_envio TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    lida BOOLEAN DEFAULT FALSE
+);
