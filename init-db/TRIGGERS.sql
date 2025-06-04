@@ -9,9 +9,10 @@ BEGIN
 
     IF certificado_rec IS NULL THEN
         RAISE EXCEPTION 'Aluno não possui certificado para o curso informado.';
-    END IF;
-
-    RETURN NEW;
+   	ELSE
+		RAISE NOTICE 'Aluno pode adicionado como monitor';
+    	RETURN NEW;
+	END IF;
 END;
 $$ LANGUAGE plpgsql;
 
