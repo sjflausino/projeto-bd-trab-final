@@ -50,3 +50,27 @@ JOIN usuarios destinatario ON m.destinatario_id = destinatario.usuario_id
 WHERE (m.remetente_id = 5 AND m.destinatario_id = 6)
    OR (m.remetente_id = 6 AND m.destinatario_id = 5)
 ORDER BY m.data_envio;
+
+-- 8. Cursos mais populares (com mais alunos matriculados)
+SELECT c.titulo, COUNT(i.aluno_id) AS total_matriculados
+FROM cursos c
+JOIN inscricoes i ON c.curso_id = i.curso_id
+GROUP BY c.curso_id, c.titulo
+ORDER BY total_matriculados DESC
+LIMIT 10;
+
+-- 9. Relatório de certificados emitidos por mês
+SELECT TO_CHAR(cert.data_emissao, 'YYYY-MM') AS mes_emissao,
+      COUNT(cert.certificado_id) AS total_emitidos
+FROM certificados cert
+GROUP BY TO_CHAR(cert.data_emissao, 'YYYY-MM')
+ORDER BY mes_emissao DESC;
+
+-- 10. Alunos com mais cursos concluídos
+SELECT u.nome, COUNT(cert.certificado_id) AS cursos_concluidos
+FROM certificados cert
+JOIN alunos a ON cert.aluno_id = a.aluno_id
+JOIN usuarios u ON a.aluno_id = u.usuario_id
+GROUP BY u.usuario_id, u.nome
+ORDER BY cursos_concluidos DESC
+LIMIT 10;
