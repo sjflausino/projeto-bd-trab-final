@@ -19,7 +19,7 @@ JOIN modulos m ON a.modulo_id = m.modulo_id
 JOIN cursos c ON m.curso_id = c.curso_id
 JOIN alunos al ON pr.aluno_id = al.aluno_id
 JOIN usuarios u ON al.aluno_id = u.usuario_id
-WHERE u.nome ILIKE '%Eduardo%';  -- ou WHERE u.usuario_id = 8
+WHERE LOWER(u.nome) LIKE '%eduardo%';  -- ou WHERE u.usuario_id = 8
 
 -- 4. Ver a média de avaliações por curso
 SELECT c.titulo, ROUND(AVG(av.nota), 2) AS media_nota, COUNT(av.avaliacao_id) AS total_avaliacoes
