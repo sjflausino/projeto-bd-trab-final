@@ -158,7 +158,11 @@ INSERT INTO comentarios (postagem_id, usuario_id, conteudo) VALUES
 
 -- Novos Monitores
 INSERT INTO monitores (aluno_id, curso_id, data_inicio) VALUES
-(5, 3, CURRENT_DATE);
+(5, 3, CURRENT_DATE),
+(1, 1, CURRENT_DATE);
+
+
+
 
 -- Novas Mensagens
 INSERT INTO mensagens (remetente_id, destinatario_id, conteudo) VALUES
