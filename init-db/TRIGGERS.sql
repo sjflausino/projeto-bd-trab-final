@@ -23,13 +23,13 @@ EXECUTE FUNCTION check_monitor();
 
 
 CREATE OR REPLACE FUNCTION check_nota(a_id integer,c_id integer) 
-RETURNS FLOAT 
+RETURNS integer 
 LANGUAGE plpgsql as $$
 DECLARE
- 	nota float;
+ 	n integer;
 BEGIN
-    nota := nota FROM avaliacoes WHERE aluno_id = a_id AND curso_id = c_id;
-	return nota;
+    n := nota FROM avaliacoes WHERE aluno_id = a_id AND curso_id = c_id;
+	return n;
 END;
 $$;
 
@@ -64,7 +64,7 @@ BEGIN
     END LOOP;
 
     -- Verifica a nota mínima para certificado
-    IF check_nota(NEW.aluno_id, NEW.curso_id) < 6.0 THEN
+    IF check_nota(NEW.aluno_id, NEW.curso_id) < 3 THEN
         RAISE EXCEPTION 'Aluno não possui nota suficiente para obter o certificado.';
     ELSE
         RAISE NOTICE 'Certificado criado com sucesso.';
@@ -77,4 +77,14 @@ CREATE TRIGGER certificado_trigger
 BEFORE INSERT ON certificados
 FOR EACH ROW
 EXECUTE FUNCTION check_certificado();
+
+create or replace function concluir_inscricao()
+returns trigger as $$
+begin
+	update inscricoes set status = 'concluido' where aluno_id = new.aluno_id and curso_id = new.curso_id;
+	return new;
+end; $$ LANGUAGE plpgsql;
+
+create or replace trigger concluir_inscricao_trigger after insert on certificados
+for each row execute function concluir_inscricao();
 

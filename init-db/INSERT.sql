@@ -48,8 +48,6 @@ INSERT INTO inscricoes (aluno_id, curso_id, status) VALUES
 INSERT INTO progresso (aula_id, aluno_id, assistido, data_visualizacao) VALUES
 (1, 1, TRUE, CURRENT_DATE),
 (2, 1, TRUE, CURRENT_DATE),
-(3, 1, TRUE, CURRENT_DATE),
-(2, 1, FALSE, NULL),
 (3, 2, TRUE, CURRENT_DATE);
 
 -- Certificados
