@@ -50,10 +50,6 @@ INSERT INTO progresso (aula_id, aluno_id, assistido, data_visualizacao) VALUES
 (2, 1, TRUE, CURRENT_DATE),
 (3, 2, TRUE, CURRENT_DATE);
 
--- Certificados
-INSERT INTO certificados (aluno_id, curso_id, data_emissao, codigo_validacao) VALUES
-(1, 1, CURRENT_DATE, 'CERT-ALICE-001');
-
 -- Avaliações
 INSERT INTO avaliacoes (aluno_id, curso_id, nota, comentario) VALUES
 (1, 1, 5, 'Excelente curso! Recomendo.'),

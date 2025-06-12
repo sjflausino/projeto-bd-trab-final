@@ -148,3 +148,6 @@ CREATE TABLE mensagens (
     data_envio TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
     lida BOOLEAN DEFAULT FALSE
 );
+
+ALTER TABLE certificados
+  ADD CONSTRAINT unique_certificado_aluno_curso UNIQUE (aluno_id, curso_id);
