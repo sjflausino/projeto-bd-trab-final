@@ -37,3 +37,14 @@ BEGIN
     RETURN ROUND((aulas_assistidas::NUMERIC / total_aulas) * 100, 2);
 END;
 $$ LANGUAGE plpgsql;
+
+CREATE OR REPLACE FUNCTION media_de_nota_curso(cursoid integer) 
+RETURNS float  
+LANGUAGE plpgsql as $$
+DECLARE
+ 	nota float;
+BEGIN
+    select ROUNG(AVG(nota),2) FROM avaliacoes into nota  WHERE curso_id = cursoid;
+	return nota;
+END;
+$$;
