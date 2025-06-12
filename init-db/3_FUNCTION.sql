@@ -40,11 +40,11 @@ $$ LANGUAGE plpgsql;
 
 CREATE OR REPLACE FUNCTION media_de_nota_curso(cursoid integer) 
 RETURNS float  
-LANGUAGE plpgsql as $$
+LANGUAGE plpgsql AS $$
 DECLARE
- 	nota float;
+ 	n float;
 BEGIN
-    select ROUNG(AVG(nota),2) FROM avaliacoes into nota  WHERE curso_id = cursoid;
-	return nota;
+    SELECT ROUND(AVG(avaliacoes.nota),2) FROM avaliacoes INTO n WHERE curso_id = cursoid;
+	RETURN n;
 END;
 $$;

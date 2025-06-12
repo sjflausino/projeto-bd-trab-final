@@ -18,3 +18,10 @@ JOIN
     cursos cu ON cu.curso_id = c.curso_id
 WHERE 
     i.status = 'concluido';
+
+CREATE OR REPLACE VIEW vw_media_cursos AS
+SELECT 
+    titulo AS curso, 
+    media_de_nota_curso(curso_id) AS media 
+FROM 
+    cursos;
