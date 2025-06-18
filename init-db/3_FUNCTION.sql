@@ -48,3 +48,43 @@ BEGIN
 	RETURN n;
 END;
 $$;
+
+CREATE OR REPLACE FUNCTION func_inscrever_aluno(p_aluno_id INT, p_curso_id INT)
+RETURNS TEXT AS $$
+DECLARE
+    ja_inscrito BOOLEAN;
+    curso_ativo BOOLEAN;
+BEGIN
+    SELECT TRUE INTO ja_inscrito
+    FROM inscricoes
+    WHERE aluno_id = p_aluno_id AND curso_id = p_curso_id;
+
+    IF ja_inscrito THEN
+        RETURN 'Aluno já inscrito no curso.';
+    END IF;
+
+    SELECT ativo INTO curso_ativo FROM cursos WHERE curso_id = p_curso_id;
+
+    IF NOT curso_ativo THEN
+        RETURN 'Curso inativo.';
+    END IF;
+
+    INSERT INTO inscricoes (aluno_id, curso_id, status)
+    VALUES (p_aluno_id, p_curso_id, 'em andamento');
+
+    RETURN 'Inscrição realizada com sucesso.';
+END;
+$$ LANGUAGE plpgsql
+
+CREATE OR REPLACE FUNCTION func_mensagens_nao_lidas(p_usuario_id INT)
+RETURNS INT AS $$
+DECLARE
+    total INT;
+BEGIN
+    SELECT COUNT(*) INTO total
+    FROM mensagens
+    WHERE destinatario_id = p_usuario_id AND lida = FALSE;
+
+    RETURN total;
+END;
+$$ LANGUAGE plpgsql;
