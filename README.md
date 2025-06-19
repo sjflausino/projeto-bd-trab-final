@@ -38,7 +38,7 @@ Este repositório contém os seguintes arquivos e diretórios:
     Execute o seguinte comando para inicializar os contêineres:
 
     ```bash
-    docker-compose up -d
+    docker compose up -d
     ```
 
     O Docker Compose irá:
@@ -68,7 +68,7 @@ Este repositório contém os seguintes arquivos e diretórios:
     Para parar e remover os contêineres, execute o seguinte comando:
 
     ```bash
-    docker-compose down
+    docker compose down
     ```
 
 6. **Remover volumes** (opcional):
@@ -76,7 +76,7 @@ Este repositório contém os seguintes arquivos e diretórios:
     Se você quiser remover também os volumes, o que apagará todos os dados, execute:
 
     ```bash
-    docker-compose down -v
+    docker compose down -v
     ```
 
 ## Personalização
