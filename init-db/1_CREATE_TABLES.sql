@@ -1,153 +1,175 @@
+-- ==================================================================
 -- Criação das tabelas principais para a Plataforma de Cursos Online
+-- ==================================================================
 
--- Tabela base: usuarios
 CREATE TABLE usuarios (
-    usuario_id SERIAL PRIMARY KEY,
+    usuario_id SERIAL,
     nome VARCHAR(100) NOT NULL,
     email VARCHAR(100) UNIQUE NOT NULL,
     senha VARCHAR(255) NOT NULL,
     tipo VARCHAR(20) NOT NULL CHECK (tipo IN ('aluno', 'professor', 'administrador')),
-    data_cadastro DATE DEFAULT CURRENT_DATE
+    data_cadastro DATE DEFAULT CURRENT_DATE,
+    CONSTRAINT pk_usuarios PRIMARY KEY (usuario_id)
 );
 
--- Especialização: alunos
 CREATE TABLE alunos (
-    aluno_id INT PRIMARY KEY REFERENCES usuarios(usuario_id),
+    aluno_id INT,
     data_nascimento DATE,
-    telefone VARCHAR(20)
+    telefone VARCHAR(20),
+    CONSTRAINT pk_alunos PRIMARY KEY (aluno_id),
+    CONSTRAINT fk_aluno_usuario FOREIGN KEY (aluno_id) REFERENCES usuarios(usuario_id)
 );
 
--- Especialização: professores
 CREATE TABLE professores (
-    professor_id INT PRIMARY KEY REFERENCES usuarios(usuario_id),
+    professor_id INT,
     curriculo TEXT,
-    especialidade VARCHAR(100)
+    especialidade VARCHAR(100),
+    CONSTRAINT pk_professores PRIMARY KEY (professor_id),
+    CONSTRAINT fk_professor_usuario FOREIGN KEY (professor_id) REFERENCES usuarios(usuario_id)
 );
 
--- Especialização: administradores
 CREATE TABLE administradores (
-    administrador_id INT PRIMARY KEY REFERENCES usuarios(usuario_id),
+    administrador_id INT,
     cargo VARCHAR(50),
-    nivel_acesso INT CHECK (nivel_acesso BETWEEN 1 AND 5)
+    nivel_acesso INT CHECK (nivel_acesso BETWEEN 1 AND 5),
+    CONSTRAINT pk_administradores PRIMARY KEY (administrador_id),
+    CONSTRAINT fk_administrador_usuario FOREIGN KEY (administrador_id) REFERENCES usuarios(usuario_id)
 );
 
--- Categorias de curso
 CREATE TABLE categorias (
-    categoria_id SERIAL PRIMARY KEY,
+    categoria_id SERIAL,
     nome VARCHAR(50) NOT NULL,
-    descricao TEXT
+    descricao TEXT,
+    CONSTRAINT pk_categorias PRIMARY KEY (categoria_id)
 );
 
--- Cursos
 CREATE TABLE cursos (
-    curso_id SERIAL PRIMARY KEY,
+    curso_id SERIAL,
     titulo VARCHAR(100) NOT NULL,
     descricao TEXT,
-    categoria_id INT REFERENCES categorias(categoria_id),
-    professor_id INT REFERENCES professores(professor_id),
+    categoria_id INT,
+    professor_id INT,
     data_criacao DATE DEFAULT CURRENT_DATE,
-    ativo BOOLEAN DEFAULT TRUE
+    ativo BOOLEAN DEFAULT TRUE,
+    CONSTRAINT pk_cursos PRIMARY KEY (curso_id),
+    CONSTRAINT fk_curso_categoria FOREIGN KEY (categoria_id) REFERENCES categorias(categoria_id),
+    CONSTRAINT fk_curso_professor FOREIGN KEY (professor_id) REFERENCES professores(professor_id)
 );
 
--- Módulos dos cursos
 CREATE TABLE modulos (
-    modulo_id SERIAL PRIMARY KEY,
-    curso_id INT REFERENCES cursos(curso_id),
+    modulo_id SERIAL,
+    curso_id INT,
     titulo VARCHAR(100) NOT NULL,
-    ordem INT NOT NULL
+    ordem INT NOT NULL,
+    CONSTRAINT pk_modulos PRIMARY KEY (modulo_id),
+    CONSTRAINT fk_modulo_curso FOREIGN KEY (curso_id) REFERENCES cursos(curso_id)
 );
 
--- Aulas dos módulos
 CREATE TABLE aulas (
-    aula_id SERIAL PRIMARY KEY,
-    modulo_id INT REFERENCES modulos(modulo_id),
+    aula_id SERIAL,
+    modulo_id INT,
     titulo VARCHAR(100) NOT NULL,
     descricao TEXT,
     video_url TEXT,
-    ordem INT NOT NULL
+    ordem INT NOT NULL,
+    CONSTRAINT pk_aulas PRIMARY KEY (aula_id),
+    CONSTRAINT fk_aula_modulo FOREIGN KEY (modulo_id) REFERENCES modulos(modulo_id)
 );
 
--- Inscrições de alunos nos cursos
 CREATE TABLE inscricoes (
-    inscricao_id SERIAL PRIMARY KEY,
-    aluno_id INT REFERENCES alunos(aluno_id),
-    curso_id INT REFERENCES cursos(curso_id),
+    inscricao_id SERIAL,
+    aluno_id INT,
+    curso_id INT,
     status VARCHAR(20) CHECK (status IN ('em andamento', 'concluido', 'cancelado')),
-    data_inscricao DATE DEFAULT CURRENT_DATE
+    data_inscricao DATE DEFAULT CURRENT_DATE,
+    CONSTRAINT pk_inscricoes PRIMARY KEY (inscricao_id, aluno_id, curso_id),
+    CONSTRAINT fk_inscricao_aluno FOREIGN KEY (aluno_id) REFERENCES alunos(aluno_id),
+    CONSTRAINT fk_inscricao_curso FOREIGN KEY (curso_id) REFERENCES cursos(curso_id)
 );
 
--- Progresso do aluno nas aulas
 CREATE TABLE progresso (
-    progresso_id SERIAL PRIMARY KEY,
-    aula_id INT REFERENCES aulas(aula_id),
-    aluno_id INT REFERENCES alunos(aluno_id),
+    progresso_id SERIAL,
+    aula_id INT,
+    aluno_id INT,
     assistido BOOLEAN DEFAULT FALSE,
-    data_visualizacao DATE
+    data_visualizacao DATE,
+    CONSTRAINT pk_progresso PRIMARY KEY (progresso_id, aula_id, aluno_id),
+    CONSTRAINT fk_progresso_aula FOREIGN KEY (aula_id) REFERENCES aulas(aula_id),
+    CONSTRAINT fk_progresso_aluno FOREIGN KEY (aluno_id) REFERENCES alunos(aluno_id)
 );
 
--- Certificados de conclusão
 CREATE TABLE certificados (
-    certificado_id SERIAL PRIMARY KEY,
-    aluno_id INT REFERENCES alunos(aluno_id),
-    curso_id INT REFERENCES cursos(curso_id),
+    certificado_id SERIAL,
+    aluno_id INT,
+    curso_id INT,
     data_emissao DATE DEFAULT CURRENT_DATE,
-    codigo_validacao VARCHAR(100) UNIQUE NOT NULL
+    codigo_validacao VARCHAR(100) UNIQUE NOT NULL,
+    CONSTRAINT pk_certificados PRIMARY KEY (certificado_id, aluno_id, curso_id),
+    CONSTRAINT fk_certificado_aluno FOREIGN KEY (aluno_id) REFERENCES alunos(aluno_id),
+    CONSTRAINT fk_certificado_curso FOREIGN KEY (curso_id) REFERENCES cursos(curso_id)
 );
 
--- Avaliações de cursos pelos alunos
 CREATE TABLE avaliacoes (
-    avaliacao_id SERIAL PRIMARY KEY,
-    aluno_id INT REFERENCES alunos(aluno_id),
-    curso_id INT REFERENCES cursos(curso_id),
+    avaliacao_id SERIAL,
+    aluno_id INT,
+    curso_id INT,
     nota INT CHECK (nota BETWEEN 1 AND 5),
     comentario TEXT,
-    data_avaliacao DATE DEFAULT CURRENT_DATE
+    data_avaliacao DATE DEFAULT CURRENT_DATE,
+    CONSTRAINT pk_avaliacoes PRIMARY KEY (avaliacao_id, aluno_id, curso_id),
+    CONSTRAINT fk_avaliacao_aluno FOREIGN KEY (aluno_id) REFERENCES alunos(aluno_id),
+    CONSTRAINT fk_avaliacao_curso FOREIGN KEY (curso_id) REFERENCES cursos(curso_id)
 );
 
--- Fóruns por curso
 CREATE TABLE foruns (
-    forum_id SERIAL PRIMARY KEY,
-    curso_id INT REFERENCES cursos(curso_id),
+    forum_id SERIAL,
+    curso_id INT,
     titulo VARCHAR(100) NOT NULL,
-    data_criacao DATE DEFAULT CURRENT_DATE
+    data_criacao DATE DEFAULT CURRENT_DATE,
+    CONSTRAINT pk_foruns PRIMARY KEY (forum_id),
+    CONSTRAINT fk_forum_curso FOREIGN KEY (curso_id) REFERENCES cursos(curso_id)
 );
 
--- Postagens nos fóruns
 CREATE TABLE postagens (
-    postagem_id SERIAL PRIMARY KEY,
-    forum_id INT REFERENCES foruns(forum_id),
-    usuario_id INT REFERENCES usuarios(usuario_id),
+    postagem_id SERIAL,
+    forum_id INT,
+    usuario_id INT,
     conteudo TEXT NOT NULL,
-    data_postagem DATE DEFAULT CURRENT_DATE
+    data_postagem DATE DEFAULT CURRENT_DATE,
+    CONSTRAINT pk_postagens PRIMARY KEY (postagem_id),
+    CONSTRAINT fk_postagem_forum FOREIGN KEY (forum_id) REFERENCES foruns(forum_id),
+    CONSTRAINT fk_postagem_usuario FOREIGN KEY (usuario_id) REFERENCES usuarios(usuario_id)
 );
 
--- Comentários nas postagens
 CREATE TABLE comentarios (
-    comentario_id SERIAL PRIMARY KEY,
-    postagem_id INT REFERENCES postagens(postagem_id),
-    usuario_id INT REFERENCES usuarios(usuario_id),
+    comentario_id SERIAL,
+    postagem_id INT,
+    usuario_id INT,
     conteudo TEXT NOT NULL,
-    data_comentario DATE DEFAULT CURRENT_DATE
+    data_comentario DATE DEFAULT CURRENT_DATE,
+    CONSTRAINT pk_comentarios PRIMARY KEY (comentario_id, postagem_id, usuario_id),
+    CONSTRAINT fk_comentario_postagem FOREIGN KEY (postagem_id) REFERENCES postagens(postagem_id),
+    CONSTRAINT fk_comentario_usuario FOREIGN KEY (usuario_id) REFERENCES usuarios(usuario_id)
 );
 
--- Monitores (alunos que concluíram o curso e ajudam outros)
 CREATE TABLE monitores (
-    monitor_id SERIAL PRIMARY KEY,
-    aluno_id INT REFERENCES alunos(aluno_id),
-    curso_id INT REFERENCES cursos(curso_id),
+    aluno_id INT,
+    curso_id INT,
     data_inicio DATE NOT NULL,
-    data_fim DATE
+    data_fim DATE,
+    CONSTRAINT pk_monitores PRIMARY KEY (aluno_id, curso_id),
+    CONSTRAINT fk_monitor_aluno FOREIGN KEY (aluno_id) REFERENCES alunos(aluno_id),
+    CONSTRAINT fk_monitor_curso FOREIGN KEY (curso_id) REFERENCES cursos(curso_id)
 );
 
--- Mensagens privadas entre usuários
 CREATE TABLE mensagens (
-    mensagem_id SERIAL PRIMARY KEY,
-    remetente_id INT REFERENCES usuarios(usuario_id) ON DELETE CASCADE,
-    destinatario_id INT REFERENCES usuarios(usuario_id) ON DELETE CASCADE,
+    mensagem_id SERIAL,
+    remetente_id INT,
+    destinatario_id INT,
     conteudo TEXT NOT NULL,
     data_envio TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
-    lida BOOLEAN DEFAULT FALSE
+    lida BOOLEAN DEFAULT FALSE,
+    CONSTRAINT pk_mensagens PRIMARY KEY (mensagem_id, remetente_id, destinatario_id),
+    CONSTRAINT fk_mensagem_remetente FOREIGN KEY (remetente_id) REFERENCES usuarios(usuario_id) ON DELETE CASCADE,
+    CONSTRAINT fk_mensagem_destinatario FOREIGN KEY (destinatario_id) REFERENCES usuarios(usuario_id) ON DELETE CASCADE
 );
-
-ALTER TABLE certificados
-  ADD CONSTRAINT unique_certificado_aluno_curso UNIQUE (aluno_id, curso_id);
