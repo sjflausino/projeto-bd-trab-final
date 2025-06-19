@@ -74,7 +74,7 @@ BEGIN
 
     RETURN 'Inscrição realizada com sucesso.';
 END;
-$$ LANGUAGE plpgsql
+$$ LANGUAGE plpgsql;
 
 CREATE OR REPLACE FUNCTION func_mensagens_nao_lidas(p_usuario_id INT)
 RETURNS INT AS $$
