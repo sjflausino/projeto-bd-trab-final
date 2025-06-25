@@ -1,0 +1,80 @@
+Iniciando relatório...
+
+=== SEM ÍNDICES ===
+
+--- query1.sql (sem índices) ---
+Tempo médio: 0.085 ms | Desvio: 0.011 ms
+
+--- query2.sql (sem índices) ---
+Tempo médio: 0.134 ms | Desvio: 0.010 ms
+
+--- query3.sql (sem índices) ---
+Tempo médio: 0.229 ms | Desvio: 0.022 ms
+
+--- query4.sql (sem índices) ---
+Tempo médio: 0.179 ms | Desvio: 0.017 ms
+
+--- query5.sql (sem índices) ---
+Tempo médio: 0.188 ms | Desvio: 0.026 ms
+
+--- query6.sql (sem índices) ---
+Tempo médio: 0.195 ms | Desvio: 0.017 ms
+
+--- query7.sql (sem índices) ---
+Tempo médio: 0.190 ms | Desvio: 0.014 ms
+
+--- query8.sql (sem índices) ---
+Tempo médio: 0.162 ms | Desvio: 0.015 ms
+
+--- query9.sql (sem índices) ---
+Tempo médio: 0.173 ms | Desvio: 0.018 ms
+
+--- query10.sql (sem índices) ---
+Tempo médio: 0.195 ms | Desvio: 0.018 ms
+
+=== COM ÍNDICES ===
+
+--- query1.sql (com índices) ---
+Tempo médio: 0.086 ms | Desvio: 0.007 ms
+
+--- query2.sql (com índices) ---
+Tempo médio: 0.150 ms | Desvio: 0.015 ms
+
+--- query3.sql (com índices) ---
+Tempo médio: 0.223 ms | Desvio: 0.005 ms
+
+--- query4.sql (com índices) ---
+Tempo médio: 0.178 ms | Desvio: 0.013 ms
+
+--- query5.sql (com índices) ---
+Tempo médio: 0.182 ms | Desvio: 0.015 ms
+
+--- query6.sql (com índices) ---
+Tempo médio: 0.183 ms | Desvio: 0.022 ms
+
+--- query7.sql (com índices) ---
+Tempo médio: 0.210 ms | Desvio: 0.027 ms
+
+--- query8.sql (com índices) ---
+Tempo médio: 0.175 ms | Desvio: 0.021 ms
+
+--- query9.sql (com índices) ---
+Tempo médio: 0.183 ms | Desvio: 0.026 ms
+
+--- query10.sql (com índices) ---
+Tempo médio: 0.200 ms | Desvio: 0.024 ms
+
+
+--- RESUMO FINAL ---
+Consulta        | Sem Índices (ms)    | Com Índices (ms)   
+---------------------------------------------------------------------
+query1.sql      | 0.085 ± 0.011       | 0.086 ± 0.007      
+query2.sql      | 0.134 ± 0.010       | 0.150 ± 0.015      
+query3.sql      | 0.229 ± 0.022       | 0.223 ± 0.005      
+query4.sql      | 0.179 ± 0.017       | 0.178 ± 0.013      
+query5.sql      | 0.188 ± 0.026       | 0.182 ± 0.015      
+query6.sql      | 0.195 ± 0.017       | 0.183 ± 0.022      
+query7.sql      | 0.190 ± 0.014       | 0.210 ± 0.027      
+query8.sql      | 0.162 ± 0.015       | 0.175 ± 0.021      
+query9.sql      | 0.173 ± 0.018       | 0.183 ± 0.026      
+query10.sql     | 0.195 ± 0.018       | 0.200 ± 0.024      
