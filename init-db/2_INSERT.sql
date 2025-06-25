@@ -115,4 +115,29 @@ INSERT INTO certificados (aluno_id, curso_id, data_emissao, codigo_validacao) VA
 (5, 3, CURRENT_DATE, 'CERT-EDUARDO-001');
 
 
+-- ============================================================================================
+-- Adicionar mais usuários (alunos)
+INSERT INTO usuarios (nome, email, senha, tipo) VALUES
+('Carlos Silva', 'carlos@example.com', 'senha123', 'aluno'),
+('Diana Pires', 'diana@example.com', 'senha123', 'aluno'),
+('Felipe Guedes', 'felipe@example.com', 'senha123', 'aluno');
 
+-- Adicionar os novos alunos
+-- Os IDs devem continuar a sequência dos IDs de usuários existentes.
+-- Supondo que o último ID de usuário inserido foi 7 (Gustavo Almeida), os próximos seriam 8, 9, 10.
+INSERT INTO alunos (aluno_id, data_nascimento, telefone) VALUES
+(7, '2001-03-15', '(41) 96666-4444'),
+(8, '1999-11-01', '(81) 95555-5555'),
+(9, '2002-07-22', '(71) 94444-6666');
+
+-- Adicionar mais cursos concluídos
+-- Inscrições para os novos alunos com status 'concluido'
+INSERT INTO inscricoes (aluno_id, curso_id, status) VALUES
+(7, 1, 'concluido'), -- Carlos Silva concluiu 'Introdução ao HTML'
+(8, 2, 'concluido'), -- Diana Pires concluiu 'Design para Iniciantes'
+(9, 3, 'concluido'), -- Felipe Guedes concluiu 'SEO para Iniciantes'
+(7, 4, 'concluido'); -- Carlos Silva concluiu 'JavaScript Básico'
+
+-- Adicionar um curso concluído para um aluno existente (ex: Alice Souza, ID 1)
+INSERT INTO inscricoes (aluno_id, curso_id, status) VALUES
+(1, 2, 'concluido'); -- Alice Souza concluiu 'Design para Iniciantes'
