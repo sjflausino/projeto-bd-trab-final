@@ -25,3 +25,8 @@ SELECT
     media_de_nota_curso(curso_id) AS media 
 FROM 
     cursos;
+
+CREATE OR REPLACE VIEW vw_mensagens_nao_lidas_usuario AS
+SELECT usuario_id,nome,func_mensagens_nao_lidas(usuario_id) AS total_nao_lidas
+from usuarios;
+
