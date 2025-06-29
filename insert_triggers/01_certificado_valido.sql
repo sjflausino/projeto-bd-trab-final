@@ -44,3 +44,6 @@ VALUES (2, 1, 4, 'Curso bom');
 -- Gera o certificado (valida triggers)
 INSERT INTO certificados (aluno_id, curso_id, data_emissao, codigo_validacao)
 VALUES (2, 1, CURRENT_DATE, 'CERT-OK-001');
+
+-- Para verificar o resultado (esta consulta deve retornar 1 linha se o gatilho funcionar):
+SELECT * FROM certificados WHERE aluno_id = 2 AND curso_id = 1;
