@@ -13,6 +13,8 @@ QUERY_FILES=( query1.sql query2.sql query3.sql query4.sql query5.sql query6.sql 
 LOG_FILE="relatorio_desempenho_consultas.txt"
 declare -A TIMES_WITHOUT_INDEX
 declare -A TIMES_WITH_INDEX
+declare -A EXPLAIN_WITHOUT_INDEX
+declare -A EXPLAIN_WITH_INDEX
 
 # ===========================
 # EXECUÇÃO COM EXPLAIN
@@ -25,20 +27,23 @@ execute_sql_with_explain() {
 }
 
 # ===========================
-# EXECUTA 3X E CALCULA MÉDIA/STDDEV
+# EXECUTA 10X E CALCULA MÉDIA/STDDEV
 # ===========================
 executar_consulta_n_vezes() {
     local sql_file=$1
     local n=10
     local tempos=()
+    local last_explain_output=""
 
     for i in $(seq 1 $n); do
         EXPLAIN_OUTPUT=$(execute_sql_with_explain "${sql_file}")
         TEMPO=$(echo "${EXPLAIN_OUTPUT}" | grep "Execution Time:" | awk '{print $3}')
         tempos+=("${TEMPO}")
+        last_explain_output="${EXPLAIN_OUTPUT}" # Store the output of the last execution
     done
 
-    echo "${tempos[@]}" | awk '
+    # Calculate mean and standard deviation
+    STATS=$(echo "${tempos[@]}" | awk '
     {
         n=NF;
         for(i=1;i<=n;i++) {
@@ -48,7 +53,10 @@ executar_consulta_n_vezes() {
         mean=sum/n;
         stddev=sqrt((sumsq - sum*sum/n)/n);
         printf "%.3f %.3f\n", mean, stddev;
-    }'
+    }')
+
+    echo "$STATS"
+    echo "$last_explain_output" # Return the last EXPLAIN output as well
 }
 
 # ===========================
@@ -63,7 +71,7 @@ EOF
 SELECT c.curso_id, c.titulo, c.descricao, u.nome AS professor FROM cursos c JOIN professores p ON c.professor_id = p.professor_id JOIN usuarios u ON p.professor_id = u.usuario_id;
 EOF
     cat <<EOF > query3.sql
-SELECT u.nome AS aluno, c.titulo AS curso, a.titulo AS aula, pr.assistido, pr.data_visualizacao FROM progresso pr JOIN aulas a ON pr.aula_id = a.aula_id JOIN modulos m ON a.modulo_id = m.modulo_id JOIN cursos c ON m.curso_id = c.curso_id JOIN alunos al ON pr.aluno_id = al.aluno_id JOIN usuarios u ON al.aluno_id = u.usuario_id WHERE LOWER(u.nome) LIKE '%alice%';
+SELECT u.nome AS aluno, c.titulo AS curso, a.titulo AS aula, pr.assistido, pr.data_visualizacao FROM progresso pr JOIN aulas a ON pr.aula_id = a.aula_id JOIN modulos m ON a.modulo_id = m.modulo_id JOIN cursos c ON m.curso_id = c.curso_id JOIN alunos al ON pr.aluno_id = al.aluno_id JOIN usuarios u ON al.aluno_id = u.usuario_id WHERE LOWER(u.nome) LIKE '%alice souza%';
 EOF
     cat <<EOF > query4.sql
 SELECT c.titulo, ROUND(AVG(av.nota), 2) AS media_nota, COUNT(av.avaliacao_id) AS total_avaliacoes FROM cursos c JOIN avaliacoes av ON c.curso_id = av.curso_id GROUP BY c.titulo ORDER BY media_nota DESC;
@@ -72,7 +80,7 @@ EOF
 SELECT u.nome AS aluno, c.titulo AS curso, cert.data_emissao, cert.codigo_validacao FROM certificados cert JOIN alunos a ON cert.aluno_id = a.aluno_id JOIN usuarios u ON a.aluno_id = u.usuario_id JOIN cursos c ON cert.curso_id = c.curso_id;
 EOF
     cat <<EOF > query6.sql
-SELECT u.nome AS monitor, c.titulo AS curso, m.data_inicio, m.data_fim FROM monitores m JOIN alunos a ON m.aluno_id = a.aluno_id JOIN usuarios u ON a.aluno_id = u.usuario_id JOIN cursos c ON m.curso_id = c.curso_id;
+SELECT u.nome AS monitor, c.titulo AS curso, m.data_inicio, m.data_fim FROM monitores m JOIN alunos a ON m.aluno_id = a.aluno_id JOIN usuarios u ON a.aluno_id = u.usuario_id JOIN cursos c ON m.curso_id = c.curso_id ORDER BY c.titulo, u.nome;
 EOF
     cat <<EOF > query7.sql
 SELECT m.mensagem_id, remetente.nome AS de, destinatario.nome AS para, m.conteudo, m.data_envio, m.lida FROM mensagens m JOIN usuarios remetente ON m.remetente_id = remetente.usuario_id JOIN usuarios destinatario ON m.destinatario_id = destinatario.usuario_id WHERE (m.remetente_id = 5 AND m.destinatario_id = 6) OR (m.remetente_id = 6 AND m.destinatario_id = 5) ORDER BY m.data_envio;
@@ -145,9 +153,16 @@ run_comparison() {
 
     for q in "${QUERY_FILES[@]}"; do
         echo -e "\n--- $q (sem índices) ---" >> "$LOG_FILE"
-        read MEDIA DP <<< $(executar_consulta_n_vezes "$q")
+        # Capture both stats and EXPLAIN output
+        readarray -t OUTPUT_ARRAY <<< $(executar_consulta_n_vezes "$q")
+        STATS_LINE=${OUTPUT_ARRAY[0]}
+        EXPLAIN_OUTPUT_LINES=("${OUTPUT_ARRAY[@]:1}") # All lines after the first are EXPLAIN output
+
+        read MEDIA DP <<< "$STATS_LINE"
+        
         echo "Tempo médio: $MEDIA ms | Desvio: $DP ms" >> "$LOG_FILE"
         TIMES_WITHOUT_INDEX["$q"]="${MEDIA} ± ${DP}"
+        EXPLAIN_WITHOUT_INDEX["$q"]="${EXPLAIN_OUTPUT_LINES[*]}" # Store as a single string
     done
 
     echo -e "\n=== COM ÍNDICES ===" >> "$LOG_FILE"
@@ -155,11 +170,19 @@ run_comparison() {
 
     for q in "${QUERY_FILES[@]}"; do
         echo -e "\n--- $q (com índices) ---" >> "$LOG_FILE"
-        read MEDIA DP <<< $(executar_consulta_n_vezes "$q")
+        # Capture both stats and EXPLAIN output
+        readarray -t OUTPUT_ARRAY <<< $(executar_consulta_n_vezes "$q")
+        STATS_LINE=${OUTPUT_ARRAY[0]}
+        EXPLAIN_OUTPUT_LINES=("${OUTPUT_ARRAY[@]:1}") # All lines after the first are EXPLAIN output
+
+        read MEDIA DP <<< "$STATS_LINE"
+        
         echo "Tempo médio: $MEDIA ms | Desvio: $DP ms" >> "$LOG_FILE"
         TIMES_WITH_INDEX["$q"]="${MEDIA} ± ${DP}"
+        EXPLAIN_WITH_INDEX["$q"]="${EXPLAIN_OUTPUT_LINES[*]}" # Store as a single string
     done
 
+    # --- RESUMO FINAL ---
     echo -e "\n\n--- RESUMO FINAL ---" >> "$LOG_FILE"
     printf "%-15s | %-20s | %-20s\n" "Consulta" "Sem Índices (ms)" "Com Índices (ms)" >> "$LOG_FILE"
     echo "---------------------------------------------------------------------" >> "$LOG_FILE"
@@ -167,9 +190,18 @@ run_comparison() {
         printf "%-15s | %-20s | %-20s\n" "$q" "${TIMES_WITHOUT_INDEX[$q]}" "${TIMES_WITH_INDEX[$q]}" >> "$LOG_FILE"
     done
 
+    # --- DETALHES DO EXPLAIN ANALYZE ---
+    echo -e "\n\n--- DETALHES DO EXPLAIN ANALYZE (Última Execução) ---" >> "$LOG_FILE"
+    for q in "${QUERY_FILES[@]}"; do
+        echo -e "\n\n### ${q} (SEM ÍNDICES) ###" >> "$LOG_FILE"
+        echo "${EXPLAIN_WITHOUT_INDEX[$q]}" >> "$LOG_FILE"
+        echo -e "\n### ${q} (COM ÍNDICES) ###" >> "$LOG_FILE"
+        echo "${EXPLAIN_WITH_INDEX[$q]}" >> "$LOG_FILE"
+    done
+
     echo -e "\nRelatório salvo em '$LOG_FILE'"
     cleanup_sql_files
 }
 
 # === EXECUTA ===
-run_comparison
+run_comparison A
