@@ -26,7 +26,7 @@ DB_PASSWORD = "postgres" # Substitua pela sua senha do PostgreSQL
 DB_PORT = "5432"
 
 # --- Configurações de Geração de Dados ---
-NUM_USUARIOS = 1000
+NUM_USUARIOS = 10000
 NUM_CATEGORIAS = 10
 NUM_CURSOS = 200
 NUM_MODULOS_POR_CURSO = 5
