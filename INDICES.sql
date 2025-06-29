@@ -37,7 +37,7 @@ CREATE INDEX IF NOT EXISTS idx_professores_professor_id ON professores (professo
 -- JOIN cursos c ON m.curso_id = c.curso_id
 -- JOIN alunos al ON pr.aluno_id = al.aluno_id
 -- JOIN usuarios u ON al.aluno_id = u.usuario_id
--- WHERE LOWER(u.nome) LIKE '%alice%';
+-- WHERE LOWER(u.nome) LIKE '%alice souza%';
 
 -- Índices recomendados:
 CREATE INDEX IF NOT EXISTS idx_usuarios_lower_nome ON usuarios (LOWER(nome));
