@@ -21,7 +21,7 @@ JOIN modulos m ON a.modulo_id = m.modulo_id
 JOIN cursos c ON m.curso_id = c.curso_id
 JOIN alunos al ON pr.aluno_id = al.aluno_id
 JOIN usuarios u ON al.aluno_id = u.usuario_id
-WHERE LOWER(u.nome) LIKE '%alice%';
+WHERE LOWER(u.nome) LIKE '%alice souza%';
 
 -- CONSULTA 4: Ver a média de avaliações por curso
 SELECT c.titulo, ROUND(AVG(av.nota), 2) AS media_nota, COUNT(av.avaliacao_id) AS total_avaliacoes
@@ -42,7 +42,8 @@ SELECT u.nome AS monitor, c.titulo AS curso, m.data_inicio, m.data_fim
 FROM monitores m
 JOIN alunos a ON m.aluno_id = a.aluno_id
 JOIN usuarios u ON a.aluno_id = u.usuario_id
-JOIN cursos c ON m.curso_id = c.curso_id;
+JOIN cursos c ON m.curso_id = c.curso_id
+ORDER BY c.titulo, u.nome;
 
 -- CONSULTA 7: Conversas entre dois usuários (Exemplo: Eduardo (5) e Fernanda (6))
 SELECT m.mensagem_id, remetente.nome AS de, destinatario.nome AS para, m.conteudo, m.data_envio, m.lida
