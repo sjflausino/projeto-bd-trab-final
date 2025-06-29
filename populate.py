@@ -6,7 +6,7 @@ import logging
 import os
 
 # --- Configuração do Logging ---
-LOG_FILE = "populate_erros.log"
+LOG_FILE = "populate_erros.txt"
 logging.basicConfig(
     filename=LOG_FILE,
     level=logging.ERROR, # Apenas mensagens de nível ERROR e acima serão salvas no arquivo
@@ -37,11 +37,11 @@ NUM_FORUNS_POR_CURSO = 1 # Multiplicador para fóruns
 NUM_POSTAGENS_POR_FORUM = 5 # Multiplicador para postagens
 NUM_COMENTARIOS_POR_POSTAGEM = 2 # Multiplicador para comentários
 NUM_MENSAGENS_POR_USUARIO = 5 # AUMENTADO PARA GERAR MAIS MENSAGENS GERAIS
-NUM_CERTIFICADOS = 150 # Número total de certificados a serem gerados
+NUM_CERTIFICADOS_ALVO = 150 # Número total de certificados a serem gerados, agora como alvo
 NUM_MONITORES = 50 # Número total de monitores a serem gerados
 NUM_MENSAGENS_ESPECIFICAS_CONVERSA = 50 # NOVA: Número de mensagens entre os IDs 5 e 6
 NUM_CURSOS_ALICE_SE_INSCREVE = 3 # Quantos cursos Alice vai se inscrever
-PERCENTUAL_AULAS_ALICE_ASSISTE = 0.6 # Percentual de aulas que Alice vai assistir por curso
+PERCENTUAL_AULAS_ALICE_ASSISTE = 1.0 # Alice agora assiste 100% das aulas nos cursos que ela se inscreve
 
 # Inicializa o Faker
 fake = Faker('pt_BR')
@@ -68,7 +68,7 @@ def truncate_tables(cursor, conn):
     # A ordem importa devido às restrições de chave estrangeira
     tables_to_truncate = [
         "mensagens", "comentarios", "postagens", "foruns",
-        "certificados", "avaliacoes", "progresso", "inscricoes", # CORRIGIDO: de 'progresso_aluno' para 'progresso'
+        "certificados", "avaliacoes", "progresso", "inscricoes",
         "aulas", "modulos", "cursos", "categorias",
         "alunos", "professores", "administradores", "monitores", "usuarios"
     ]
@@ -301,45 +301,74 @@ def populate_inscricoes(cursor, aluno_ids, curso_ids, num_inscricoes_total):
             )
             inserted_count += 1
         except psycopg2.errors.UniqueViolation:
-            logging.warning(f"Inscrição duplicada para aluno {aluno_id}, curso {curso_id}. Ignorando.")
+            logging.debug(f"Inscrição duplicada para aluno {aluno_id}, curso {curso_id}. Ignorando.")
             pass # Já existe uma inscrição para este aluno e curso, ignorar
         except Exception as e:
             logging.error(f"Erro ao inserir inscrição para aluno {aluno_id}, curso {curso_id}: {e}")
     logging.info(f"Inseridas {inserted_count} inscrições.")
 
 
-def populate_progresso(cursor, aula_ids, aluno_ids, num_progresso_total):
-    """Popula a tabela progresso, com uma chance maior de concluir aulas para alguns alunos."""
+def populate_progresso(cursor, aluno_ids, aula_to_curso_map):
+    """
+    Popula a tabela progresso, garantindo que um número razoável de alunos
+    assista a TODAS as aulas de ALGUNS de seus cursos inscritos,
+    para que certificados possam ser gerados.
+    """
     logging.info("Populando progresso...")
     inserted_count = 0
-    if not aula_ids or not aluno_ids:
-        logging.warning("Não há aulas ou alunos disponíveis para criar progresso.")
+    progresso_data_to_insert = []
+
+    # 1. Obter todas as inscrições válidas
+    inscricoes_validas = []
+    try:
+        cursor.execute("SELECT aluno_id, curso_id FROM inscricoes WHERE status IN ('em andamento', 'concluido');")
+        inscricoes_validas = cursor.fetchall()
+    except Exception as e:
+        logging.error(f"Erro ao buscar inscrições para progresso: {e}")
         return
 
-    progresso_data = []
+    if not inscricoes_validas:
+        logging.warning("Não há inscrições válidas para gerar progresso. Pulando.")
+        return
+    
+    # 2. Definir quantos % de alunos terão progresso completo em pelo menos um curso
+    percentual_alunos_com_progresso_completo = 0.3 # 30% dos alunos tentarão completar cursos
+    num_alunos_com_progresso_completo = max(1, int(len(aluno_ids) * percentual_alunos_com_progresso_completo))
+    
+    alunos_para_completar_cursos = random.sample(aluno_ids, num_alunos_com_progresso_completo)
 
-    # Para um subconjunto de alunos, tentaremos "concluir" mais aulas
-    num_alunos_para_completar = len(aluno_ids) // 5 # Ex: 20% dos alunos
-    alunos_para_completar = random.sample(aluno_ids, num_alunos_para_completar)
+    # Mapear aulas por curso para acesso rápido
+    aulas_por_curso = {}
+    for aula_id, curso_id in aula_to_curso_map.items():
+        aulas_por_curso.setdefault(curso_id, []).append(aula_id)
 
-    for aluno_id in aluno_ids:
-        if aluno_id in alunos_para_completar:
-            # Para esses alunos, tentamos marcar quase todas as aulas como assistidas
-            num_aulas_for_aluno = int(len(aula_ids) * 0.8) # 80% das aulas
+    # 3. Iterar sobre as inscrições e gerar progresso
+    for aluno_id, curso_id in inscricoes_validas:
+        if curso_id not in aulas_por_curso:
+            continue # Curso sem aulas, ignora
+
+        aulas_do_curso = aulas_por_curso[curso_id]
+        
+        if aluno_id in alunos_para_completar_cursos and random.random() < 0.7: # 70% de chance de completar para esses alunos
+            # Marcar TODAS as aulas deste curso como assistidas
+            aulas_a_marcar = aulas_do_curso
+            logging.debug(f"Aluno {aluno_id} (completo) no curso {curso_id} terá {len(aulas_a_marcar)} aulas marcadas.")
         else:
-            # Para os outros, um número aleatório menor
-            num_aulas_for_aluno = random.randint(0, len(aula_ids) // 5) # Até 20% das aulas
+            # Marcar um percentual aleatório das aulas (parcial)
+            percentual_assistido = random.uniform(0.1, 0.7) # Entre 10% e 70%
+            num_aulas_a_marcar = int(len(aulas_do_curso) * percentual_assistido)
+            aulas_a_marcar = random.sample(aulas_do_curso, min(num_aulas_a_marcar, len(aulas_do_curso)))
+            logging.debug(f"Aluno {aluno_id} (parcial) no curso {curso_id} terá {len(aulas_a_marcar)} aulas marcadas.")
 
-        selected_aulas = random.sample(aula_ids, min(num_aulas_for_aluno, len(aula_ids)))
-        for aula_id in selected_aulas:
-            assistido = True # Marcar como assistido para aumentar a chance de certificado
+        for aula_id in aulas_a_marcar:
             data_visualizacao = fake.date_between(start_date='-6m', end_date='today')
-            progresso_data.append((aula_id, aluno_id, assistido, data_visualizacao))
+            progresso_data_to_insert.append((aula_id, aluno_id, True, data_visualizacao))
 
-    unique_progresso = list(set(progresso_data))
-    random.shuffle(unique_progresso)
+    # Inserir dados de progresso de forma eficiente
+    unique_progresso_data = list(set(progresso_data_to_insert))
+    random.shuffle(unique_progresso_data) # Opcional: para randomizar a ordem de inserção
 
-    for aula_id, aluno_id, assistido, data_visualizacao in unique_progresso[:num_progresso_total]:
+    for aula_id, aluno_id, assistido, data_visualizacao in unique_progresso_data:
         try:
             cursor.execute(
                 "INSERT INTO progresso (aula_id, aluno_id, assistido, data_visualizacao) VALUES (%s, %s, %s, %s);",
@@ -347,38 +376,90 @@ def populate_progresso(cursor, aula_ids, aluno_ids, num_progresso_total):
             )
             inserted_count += 1
         except psycopg2.errors.UniqueViolation:
-            logging.warning(f"Progresso duplicado para aula {aula_id}, aluno {aluno_id}. Ignorando.")
+            logging.debug(f"Progresso duplicado para aula {aula_id}, aluno {aluno_id}. Ignorando.")
             pass
         except Exception as e:
             logging.error(f"Erro ao inserir progresso para aula {aula_id}, aluno {aluno_id}: {e}")
     logging.info(f"Inseridos {inserted_count} registros de progresso.")
 
-def populate_certificados(cursor, num_certificados_total):
+
+def populate_certificados(cursor, num_certificados_alvo):
     """
     Popula a tabela certificados.
-    Tenta pegar pares aluno-curso de inscrições existentes (concluídas ou em andamento)
-    para aumentar a chance de um certificado ser "válido" pela regra de negócio.
+    Tenta pegar pares aluno-curso que, APOS A POPULACAO DE PROGRESSO E AVALIACOES,
+    devem satisfazer os requisitos do trigger.
     """
     logging.info("Populando certificados...")
     inserted_count = 0
-
-    # Busca pares (aluno_id, curso_id) de inscrições existentes
-    # Que foram concluídas ou estão em andamento, para ter uma chance de ter progresso
+    
+    # 1. Obter todos os pares aluno_id, curso_id de inscrições 'concluido' ou 'em andamento'
+    # Vamos focar apenas nos que têm chance de sucesso real.
+    candidatos_a_certificado = []
     try:
+        # Pega inscrições com status 'concluido' ou 'em andamento'
         cursor.execute("SELECT aluno_id, curso_id FROM inscricoes WHERE status IN ('concluido', 'em andamento');")
-        possible_certificate_pairs = cursor.fetchall()
-        logging.info(f"Encontrados {len(possible_certificate_pairs)} pares aluno-curso elegíveis de inscrições.")
+        inscricoes_existentes = cursor.fetchall()
+        logging.info(f"Encontradas {len(inscricoes_existentes)} inscrições existentes para verificar certificados.")
     except Exception as e:
-        logging.error(f"Erro ao buscar inscrições elegíveis para certificados: {e}")
-        possible_certificate_pairs = []
+        logging.error(f"Erro ao buscar inscrições para candidatos a certificado: {e}")
+        return
 
-    if not possible_certificate_pairs:
-        logging.warning("Não há inscrições elegíveis para criar certificados. Pulando população de certificados.")
+    if not inscricoes_existentes:
+        logging.warning("Não há inscrições existentes para tentar gerar certificados. Pulando.")
+        return
+        
+    # Para cada inscrição, verificar se o aluno tem todas as aulas assistidas e nota suficiente
+    # Isso é um "simulador" do trigger para evitar erros desnecessários.
+    for aluno_id, curso_id in inscricoes_existentes:
+        # Verifica progresso completo (simulando a lógica do trigger check_certificado)
+        # Primeiro, quantas aulas existem no curso?
+        cursor.execute("""
+            SELECT COUNT(a.aula_id)
+            FROM aulas a
+            JOIN modulos m ON a.modulo_id = m.modulo_id
+            WHERE m.curso_id = %s;
+        """, (curso_id,))
+        total_aulas_curso = cursor.fetchone()[0]
+
+        if total_aulas_curso == 0:
+            continue # Não há aulas no curso, não pode ter certificado.
+
+        # Quantas aulas o aluno assistiu neste curso?
+        cursor.execute("""
+            SELECT COUNT(p.aula_id)
+            FROM progresso p
+            JOIN aulas a ON p.aula_id = a.aula_id
+            JOIN modulos m ON a.modulo_id = m.modulo_id
+            WHERE p.aluno_id = %s AND m.curso_id = %s AND p.assistido = TRUE;
+        """, (aluno_id, curso_id))
+        aulas_assistidas_aluno = cursor.fetchone()[0]
+
+        if aulas_assistidas_aluno != total_aulas_curso:
+            logging.debug(f"Aluno {aluno_id} curso {curso_id}: Não assistiu todas as aulas ({aulas_assistidas_aluno}/{total_aulas_curso}).")
+            continue # Não assistiu todas as aulas
+
+        # Verifica nota (simulando a lógica do trigger check_certificado)
+        cursor.execute("""
+            SELECT nota FROM avaliacoes WHERE aluno_id = %s AND curso_id = %s;
+        """, (aluno_id, curso_id))
+        resultado_nota = cursor.fetchone()
+        
+        if resultado_nota is None or resultado_nota[0] < 3: # Nota deve ser >= 3
+            logging.debug(f"Aluno {aluno_id} curso {curso_id}: Nota insuficiente ou inexistente ({resultado_nota}).")
+            continue # Nota insuficiente ou não avaliado
+
+        # Se passou por todas as verificações, adiciona aos candidatos
+        candidatos_a_certificado.append((aluno_id, curso_id))
+
+    logging.info(f"Encontrados {len(candidatos_a_certificado)} pares aluno-curso que *provavelmente* passarão no trigger de certificado.")
+
+    if not candidatos_a_certificado:
+        logging.warning("Não há candidatos válidos a certificado após a filtragem. Pulando população de certificados.")
         return
 
     # Tenta gerar certificados a partir desses pares, limitado ao total desejado
-    random.shuffle(possible_certificate_pairs) # Embaralha para pegar aleatoriamente
-    for aluno_id, curso_id in possible_certificate_pairs[:num_certificados_total]:
+    random.shuffle(candidatos_a_certificado) # Embaralha para pegar aleatoriamente
+    for aluno_id, curso_id in candidatos_a_certificado[:num_certificados_alvo]:
         data_emissao = fake.date_between(start_date='-1y', end_date='today')
         codigo_validacao = fake.unique.uuid4()
         try:
@@ -387,20 +468,20 @@ def populate_certificados(cursor, num_certificados_total):
                 (aluno_id, curso_id, data_emissao, codigo_validacao)
             )
             inserted_count += 1
+            logging.debug(f"Certificado inserido para aluno {aluno_id}, curso {curso_id}.")
         except psycopg2.errors.UniqueViolation:
             logging.warning(f"Certificado duplicado para aluno {aluno_id}, curso {curso_id}. Ignorando.")
             pass
         except Exception as e:
-            # Esta é a linha crucial para o log de erro
+            # Este erro ainda pode ocorrer se houver uma condição de corrida ou outro trigger
             logging.error(f"Erro ao inserir certificado para aluno {aluno_id}, curso {curso_id}: {e}")
     logging.info(f"Inseridos {inserted_count} certificados.")
 
 def populate_avaliacoes(cursor, num_avaliacoes_total):
-    """Popula a tabela avaliacoes."""
+    """Popula a tabela avaliacoes, priorizando notas altas para alunos que se esperam ter certificado."""
     logging.info("Populando avaliacoes...")
     inserted_count = 0
-    # Tenta criar avaliações para inscrições existentes (simulado)
-    # Busca pares (aluno_id, curso_id) de inscrições existentes
+    
     try:
         cursor.execute("SELECT aluno_id, curso_id FROM inscricoes;")
         existing_enrollments = cursor.fetchall()
@@ -414,10 +495,12 @@ def populate_avaliacoes(cursor, num_avaliacoes_total):
         return
 
     # Seleciona aleatoriamente entre as inscrições existentes
-    selected_avaliacoes_pairs = random.sample(existing_enrollments, min(num_avaliacoes_total, len(existing_enrollments)))
+    random.shuffle(existing_enrollments)
+    selected_avaliacoes_pairs = existing_enrollments[:num_avaliacoes_total]
 
     for aluno_id, curso_id in selected_avaliacoes_pairs:
-        nota = random.randint(1, 5)
+        # Para aumentar a chance de certificado, dar nota alta (3 a 5)
+        nota = random.randint(3, 5) 
         comentario = fake.sentence() if random.random() > 0.3 else None # Nem toda avaliação tem comentário
         data_avaliacao = fake.date_between(start_date='-6m', end_date='today')
         try:
@@ -427,7 +510,7 @@ def populate_avaliacoes(cursor, num_avaliacoes_total):
             )
             inserted_count += 1
         except psycopg2.errors.UniqueViolation:
-            logging.warning(f"Avaliação duplicada para aluno {aluno_id}, curso {curso_id}. Ignorando.")
+            logging.debug(f"Avaliação duplicada para aluno {aluno_id}, curso {curso_id}. Ignorando.")
             pass
         except Exception as e:
             logging.error(f"Erro ao inserir avaliação para aluno {aluno_id}, curso {curso_id}: {e}")
@@ -526,7 +609,7 @@ def populate_comentarios(cursor, postagem_ids, usuario_ids, num_comentarios_tota
             )
             inserted_count += 1
         except psycopg2.errors.UniqueViolation:
-            logging.warning(f"Comentário duplicado para postagem {postagem_id}, usuário {usuario_id}. Ignorando.")
+            logging.debug(f"Comentário duplicado para postagem {postagem_id}, usuário {usuario_id}. Ignorando.")
             pass
         except Exception as e:
             logging.error(f"Erro ao inserir comentário para postagem {postagem_id}, usuário {usuario_id}: {e}")
@@ -600,7 +683,7 @@ def populate_mensagens(cursor, usuario_ids, num_mensagens_total):
             )
             inserted_count += 1
         except psycopg2.errors.UniqueViolation:
-            logging.warning(f"Mensagem geral {i+1} duplicada para remetente {remetente_id}, destinatário {destinatario_id}. Ignorando.")
+            logging.debug(f"Mensagem geral {i+1} duplicada para remetente {remetente_id}, destinatário {destinatario_id}. Ignorando.")
             pass
         except Exception as e:
             logging.error(f"Mensagem geral {i+1}: Erro ao inserir mensagem de {remetente_id} para {destinatario_id}: {e}")
@@ -718,8 +801,8 @@ def add_specific_user_and_progress(cursor, curso_ids, aula_to_curso_map):
             logging.warning(f"Nenhuma aula encontrada para o curso {curso_id} de Alice. Pulando progresso para este curso.")
             continue
 
-        num_aulas_para_assistir = int(len(aulas_do_curso) * PERCENTUAL_AULAS_ALICE_ASSISTE)
-        aulas_assistidas_alice = random.sample(aulas_do_curso, min(num_aulas_para_assistir, len(aulas_do_curso)))
+        # Alice assiste 100% das aulas nos cursos que ela se inscreve
+        aulas_assistidas_alice = aulas_do_curso
 
         for aula_id in aulas_assistidas_alice:
             try:
@@ -729,7 +812,7 @@ def add_specific_user_and_progress(cursor, curso_ids, aula_to_curso_map):
                 )
                 logging.info(f"Progresso adicionado para Alice (Aula {aula_id}, Curso {curso_id}).")
             except psycopg2.errors.UniqueViolation:
-                logging.warning(f"Progresso duplicado para Alice (Aula {aula_id}). Ignorando.")
+                logging.debug(f"Progresso duplicado para Alice (Aula {aula_id}). Ignorando.")
             except Exception as e:
                 logging.error(f"Erro ao adicionar progresso para Alice (Aula {aula_id}): {e}")
     
@@ -779,13 +862,8 @@ def main():
             num_total_inscricoes = len(aluno_ids) * NUM_INSCRICOES_POR_ALUNO
             populate_inscricoes(cursor, aluno_ids, curso_ids, num_inscricoes_total=num_total_inscricoes)
             conn.commit()
-
-            # 8. Popula progresso (ajustado para aumentar a chance de conclusão)
-            num_total_progresso = int(len(aula_ids) * len(aluno_ids) * 0.15) # Aumentado para 15% das combinações
-            populate_progresso(cursor, aula_ids, aluno_ids, num_progresso_total=num_total_progresso)
-            conn.commit()
             
-            # 9. Adiciona Alice Souza e seu progresso (ANTES dos certificados e avaliações gerais)
+            # 8. Adiciona Alice Souza e seu progresso (ANTES dos certificados e avaliações gerais)
             # Isso garante que ela possa ser considerada para certificados/avaliações se o sistema for inteligente
             alice_id = add_specific_user_and_progress(cursor, curso_ids, aula_to_curso_map)
             if alice_id:
@@ -795,29 +873,33 @@ def main():
                 usuarios_ids['aluno'].append(alice_id) 
             conn.commit()
 
-
-            # 10. Popula certificados (agora tenta buscar inscrições com progresso)
-            populate_certificados(cursor, num_certificados_total=NUM_CERTIFICADOS)
+            # 9. Popula progresso (agora passa aula_to_curso_map)
+            # Nao eh mais 'num_total_progresso' pois a logica eh mais granular.
+            populate_progresso(cursor, aluno_ids, aula_to_curso_map)
             conn.commit()
-
-            # 11. Popula avaliacoes
+            
+            # 10. Popula avaliacoes (ANTES DOS CERTIFICADOS)
             num_total_avaliacoes = num_total_inscricoes * NUM_AVALIACOES_POR_INSCRICAO
             populate_avaliacoes(cursor, num_avaliacoes_total=num_total_avaliacoes)
             conn.commit()
 
+            # 11. Popula certificados (agora tenta buscar inscrições com progresso e nota)
+            populate_certificados(cursor, num_certificados_alvo=NUM_CERTIFICADOS_ALVO)
+            conn.commit()
+
             # 12. Popula foruns
             num_total_foruns = len(curso_ids) * NUM_FORUNS_POR_CURSO
-            forum_ids = populate_foruns(cursor, curso_ids, num_foruns_total=num_total_foruns)
+            forum_ids = populate_foruns(cursor, curso_ids, num_total_foruns)
             conn.commit()
 
             # 13. Popula postagens
             num_total_postagens = len(forum_ids) * NUM_POSTAGENS_POR_FORUM
-            postagem_ids = populate_postagens(cursor, forum_ids, usuarios_ids, num_postagens_total=num_total_postagens)
+            postagem_ids = populate_postagens(cursor, forum_ids, usuarios_ids, num_total_postagens)
             conn.commit()
 
             # 14. Popula comentarios
             num_total_comentarios = len(postagem_ids) * NUM_COMENTARIOS_POR_POSTAGEM
-            populate_comentarios(cursor, postagem_ids, usuarios_ids, num_comentarios_total=num_total_comentarios)
+            populate_comentarios(cursor, postagem_ids, usuarios_ids, num_total_comentarios)
             conn.commit()
 
             # 15. Popula monitores (agora tenta buscar certificados existentes)
@@ -826,7 +908,7 @@ def main():
 
             # 16. Popula mensagens GERAIS
             num_total_mensagens = len(aluno_ids) * NUM_MENSAGENS_POR_USUARIO
-            populate_mensagens(cursor, usuarios_ids, num_mensagens_total=num_total_mensagens)
+            populate_mensagens(cursor, usuarios_ids, num_total_mensagens)
             conn.commit()
 
             # 17. Popula mensagens ESPECÍFICAS entre usuários 5 e 6
