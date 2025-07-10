@@ -912,11 +912,6 @@ def main():
             conn.commit()
 
             # 17. Popula mensagens ESPECÍFICAS entre usuários 5 e 6
-            # É importante garantir que os usuários 5 e 6 existam.
-            # No seu script, os IDs são gerados sequencialmente, então os primeiros usuários terão IDs baixos.
-            # Se você deseja garantir que 5 e 6 são alunos, professores ou admins,
-            # pode ajustar a lógica de populate_usuarios ou a escolha dos IDs aqui.
-            # O ideal é usar IDs conhecidos, não fixos 5 e 6, mas vamos manter por enquanto.
             if len(usuarios_ids['aluno'] + usuarios_ids['professor'] + usuarios_ids['administrador']) >= 6:
                  # Tentativa de pegar os IDs 5 e 6 se existirem
                  user_id_5 = None
